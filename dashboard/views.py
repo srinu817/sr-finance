@@ -8,7 +8,6 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib import messages
 from django.core.cache import cache
-from django.utils import timezone
 
 from .models import Expense, Income, Loan
 from .forms import LoanForm
@@ -44,7 +43,6 @@ def login_view(request):
         username = request.POST.get("username")
         password = request.POST.get("password")
 
-        # 🔥 RATE LIMIT
         attempts = cache.get(f"login_attempts_{username}", 0)
         if attempts >= 5:
             return render(request, "dashboard/login.html", {
@@ -61,10 +59,7 @@ def login_view(request):
 
         if user:
             login(request, user)
-
-            # ✅ reset attempts
             cache.delete(f"login_attempts_{username}")
-
             return redirect("dashboard")
         else:
             cache.set(f"login_attempts_{username}", attempts + 1, timeout=300)
@@ -107,13 +102,12 @@ def logout_view(request):
     return redirect("login")
 
 
-# ========================= OTP (REDIS) ========================= #
+# ========================= OTP ========================= #
 
 def otp_login(request):
     if request.method == "POST":
         email = request.POST.get("email")
 
-        # 🔥 RATE LIMIT OTP
         otp_attempts = cache.get(f"otp_attempts_{email}", 0)
         if otp_attempts >= 3:
             return render(request, "dashboard/login.html", {
@@ -127,12 +121,8 @@ def otp_login(request):
 
         otp = str(random.randint(100000, 999999))
 
-        # 🔥 STORE OTP
         cache.set(f"otp_{email}", otp, timeout=300)
-
-        # 🔥 OTP TIMER (30 sec resend block)
         cache.set(f"otp_timer_{email}", True, timeout=30)
-
         cache.set(f"otp_attempts_{email}", otp_attempts + 1, timeout=300)
 
         request.session['otp_email'] = email
@@ -207,14 +197,20 @@ def dashboard_view(request):
 @login_required
 def expenses_view(request):
     if request.method == "POST":
-        Expense.objects.create(
+        expense = Expense.objects.create(
             user=request.user,
             amount=request.POST["amount"],
             category=request.POST["category"],
             date=request.POST["date"]
         )
 
-        cache.delete(f"dashboard_{request.user.id}")  # refresh cache
+        send_user_mail(
+            request.user,
+            "Expense Added 💸",
+            f"You added an expense of ₹{expense.amount} in {expense.category}"
+        )
+
+        cache.delete(f"dashboard_{request.user.id}")
 
         return redirect("expenses")
 
@@ -237,11 +233,17 @@ def delete_expense(request, id):
 @login_required
 def income_view(request):
     if request.method == "POST":
-        Income.objects.create(
+        income = Income.objects.create(
             user=request.user,
             amount=request.POST["amount"],
             source=request.POST["source"],
             date=request.POST["date"]
+        )
+
+        send_user_mail(
+            request.user,
+            "Income Added 💰",
+            f"You received ₹{income.amount} from {income.source}"
         )
 
         cache.delete(f"dashboard_{request.user.id}")
@@ -279,6 +281,12 @@ def add_loan(request):
         loan.user = request.user
         loan.save()
 
+        send_user_mail(
+            request.user,
+            "Loan Added 🏦",
+            f"You added a loan of ₹{loan.amount}"
+        )
+
         cache.delete(f"dashboard_{request.user.id}")
 
         return redirect("loans")
@@ -302,9 +310,19 @@ def mark_paid(request, loan_id):
     loan.status = "Paid"
     loan.save()
 
+    send_user_mail(
+        request.user,
+        "Loan Paid ✅",
+        f"Your loan of ₹{loan.amount} is marked as PAID"
+    )
+
     cache.delete(f"dashboard_{request.user.id}")
 
     return redirect("loans")
+
+
+# ========================= REPORTS ========================= #
+
 @login_required
 def reports(request):
 
@@ -314,7 +332,6 @@ def reports(request):
 
     wallet = total_income - total_expense - total_loan
 
-    # Monthly data
     monthly_expenses = (
         Expense.objects.filter(user=request.user)
         .annotate(month=ExtractMonth('date'))
@@ -323,7 +340,6 @@ def reports(request):
         .order_by('month')
     )
 
-    # Add month name + income dummy (optional)
     for m in monthly_expenses:
         m['month_name'] = calendar.month_name[m['month']]
         m['income'] = Income.objects.filter(
@@ -331,7 +347,6 @@ def reports(request):
             date__month=m['month']
         ).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    # 🔥 Email / Download actions
     if request.method == "POST":
 
         if "send_email" in request.POST:
@@ -344,9 +359,6 @@ Wallet: ₹{wallet}
             send_user_mail(request.user, "Your Report 📊", message)
             messages.success(request, "Report sent to your email ✅")
 
-        if "download" in request.POST:
-            messages.success(request, "Download feature coming soon 📥")
-
     context = {
         "total_income": total_income,
         "total_expense": total_expense,
@@ -356,39 +368,3 @@ Wallet: ₹{wallet}
     }
 
     return render(request, "dashboard/reports.html", context)
-@login_required
-def profile_view(request):
-
-    if request.method == "POST":
-        request.user.username = request.POST.get("username")
-        request.user.email = request.POST.get("email")
-        request.user.save()
-
-        messages.success(request, "Profile updated successfully ✅")
-        return redirect("profile")
-
-    return render(request, "dashboard/profile.html")
-@login_required
-def settings_view(request):
-
-    if request.method == "POST":
-        password = request.POST.get("password")
-
-        if password:
-            request.user.set_password(password)
-            request.user.save()
-
-            messages.success(request, "Password updated successfully 🔐")
-            return redirect("login")
-
-    return render(request, "dashboard/settings.html")
-@login_required
-def delete_account(request):
-
-    if request.method == "POST":
-        user = request.user
-        logout(request)
-        user.delete()
-
-        messages.success(request, "Account deleted successfully ❌")
-        return redirect("login")
