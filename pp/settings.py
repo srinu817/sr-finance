@@ -7,9 +7,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 🔐 SECURITY
 # SECRET_KEY = os.environ.get('SECRET_KEY')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-key')
-DEBUG = True
+DEBUG = False
 # ALLOWED_HOSTS = ['finex-kel1.onrender.com']
-ALLOWED_HOSTS = ['finex-kel1.onrender.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['sr-finance.onrender.com', '127.0.0.1', 'localhost']
 # CSRF_TRUSTED_ORIGINS = [
 #     "https://finex-kel1.onrender.com"
 # ]
@@ -17,6 +17,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://finex-kel1.onrender.com",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+     "https://sr-finance.onrender.com",
 ]
 
 # 🧠 APPS
@@ -63,10 +64,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pp.wsgi.application'
 
 # 🗄️ DATABASE (optimized)
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+#         conn_max_age=600,   # keeps DB connection alive ⚡
+#     )
+# }
+import os
+import dj_database_url
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,   # keeps DB connection alive ⚡
+    'default': dj_database_url.parse(
+        os.environ.get("DATABASE_URL")
     )
 }
 
