@@ -1,0 +1,92 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>Income</h1>
+</div>
+
+<div class="dashboard-grid">
+
+    <!-- Add Income -->
+    <div class="card">
+
+        <h3>Add Income</h3>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <input type="number" name="amount" placeholder="Amount" required>
+            </div>
+
+            <div class="form-group">
+                <input type="text" name="source" placeholder="Source" required>
+            </div>
+
+            <div class="form-group">
+                <input type="date" name="date" required>
+            </div>
+
+            <button class="btn-primary">Add Income</button>
+
+        </form>
+
+    </div>
+
+    <!-- Income Table -->
+    <div class="card">
+
+        <h3>Your Income</h3>
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Amount</th>
+                        <th>Source</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for i in incomes %}
+
+                    <tr>
+                        <td class="amount">₹{{ i.amount }}</td>
+                        <td>{{ i.source }}</td>
+                        <td>{{ i.date }}</td>
+
+                        <td>
+                            <form method="POST" action="{% url 'delete_income' i.id %}">
+                                {% csrf_token %}
+                                <button class="btn-delete">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="4" class="empty">
+                            No income added yet
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

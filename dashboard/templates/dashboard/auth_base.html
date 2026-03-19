@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SR Finance</title>
+
+<style>
+
+/* RESET */
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI', sans-serif;
+}
+
+/* BACKGROUND */
+body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background:
+    linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+    url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c');
+
+    background-size:cover;
+    background-position:center;
+}
+
+/* CONTAINER */
+.container{
+    width:100%;
+    max-width:380px;
+}
+
+/* CARD */
+.card{
+    background:rgba(255,255,255,0.1);
+    backdrop-filter:blur(15px);
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+    color:white;
+}
+
+/* HEADING */
+h2{
+    text-align:center;
+    margin-bottom:20px;
+    font-weight:600;
+}
+
+/* INPUT */
+input{
+    width:100%;
+    padding:10px;
+    margin-bottom:15px;
+    border:none;
+    border-radius:6px;
+    outline:none;
+}
+
+/* BUTTON */
+button{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:6px;
+    background:#4CAF50;
+    color:white;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    background:#43a047;
+}
+
+/* OTP BUTTON */
+.btn-otp{
+    background:#3498db;
+}
+
+.btn-otp:hover{
+    background:#2980b9;
+}
+
+/* TABS */
+.tabs{
+    display:flex;
+    margin-bottom:20px;
+    border-bottom:1px solid rgba(255,255,255,0.2);
+}
+
+.tab{
+    flex:1;
+    text-align:center;
+    padding:10px;
+    cursor:pointer;
+    color:#ccc;
+}
+
+.tab.active{
+    border-bottom:3px solid #4CAF50;
+    color:white;
+}
+
+/* HIDDEN */
+.hidden{
+    display:none;
+}
+
+/* ERROR */
+.error{
+    color:#ff6b6b;
+    text-align:center;
+    margin-bottom:10px;
+}
+
+/* MESSAGE */
+.message{
+    text-align:center;
+    margin-bottom:10px;
+    font-size:14px;
+}
+
+.message.success{ color:#2ecc71; }
+.message.error{ color:#ff6b6b; }
+
+/* FOOTER */
+.footer{
+    text-align:center;
+    margin-top:15px;
+}
+
+.footer a{
+    color:#4CAF50;
+    text-decoration:none;
+}
+
+/* REMEMBER FIXED */
+.remember{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:10px;
+    margin:10px 0;
+    color:#ccc;
+}
+
+.remember input{
+    width:auto;
+    margin:0;
+    transform:scale(1.2);
+    cursor:pointer;
+}
+
+.remember label{
+    cursor:pointer;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+<div class="card">
+
+{% block content %}
+{% endblock %}
+
+</div>
+</div>
+
+<script>
+
+// TAB SWITCH
+function showTab(tab, event){
+    document.getElementById('password').classList.add('hidden');
+    document.getElementById('otp').classList.add('hidden');
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+    document.getElementById(tab).classList.remove('hidden');
+    event.target.classList.add('active');
+}
+
+// AUTO OTP SWITCH
+window.onload = function(){
+   if(document.getElementById('otp_auto')){
+        document.getElementById('password').classList.add('hidden');
+        document.getElementById('otp').classList.remove('hidden');
+
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab')[1].classList.add('active');
+    }
+}
+
+</script>
+
+</body>
+</html>

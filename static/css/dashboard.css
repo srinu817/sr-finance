@@ -1,0 +1,173 @@
+/* Reset */
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI', Arial, sans-serif;
+}
+
+body{
+background:#f4f6f9;
+}
+
+/* Sidebar */
+.sidebar{
+width:240px;
+height:100vh;
+background:#2f3e4e;
+color:white;
+position:fixed;
+padding-top:20px;
+}
+
+.sidebar h2{
+text-align:center;
+margin-bottom:30px;
+}
+
+.sidebar a{
+display:block;
+padding:12px 25px;
+color:#cfd8dc;
+text-decoration:none;
+}
+
+.sidebar a:hover{
+background:#1abc9c;
+color:white;
+}
+
+/* Content */
+.content{
+margin-left:240px;
+min-height:100vh;
+}
+
+/* Topbar */
+.topbar{
+height:60px;
+background:white;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 30px;
+box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Container */
+.container{
+padding:30px;
+}
+
+/* Cards */
+.cards{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+gap:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+
+/* Grid */
+.dashboard-grid{
+display:grid;
+grid-template-columns:320px 1fr;
+gap:25px;
+}
+
+@media(max-width:768px){
+.dashboard-grid{
+grid-template-columns:1fr;
+}
+}
+
+/* Forms */
+.form-group{
+margin-bottom:15px;
+}
+
+.form-group input{
+width:100%;
+padding:10px;
+border:1px solid #ddd;
+border-radius:6px;
+}
+
+/* Inputs */
+input, select{
+padding:10px;
+border:1px solid #ddd;
+border-radius:6px;
+}
+
+/* Buttons */
+.btn{
+padding:6px 10px;
+border-radius:5px;
+color:white;
+border:none;
+cursor:pointer;
+font-size:13px;
+}
+
+.btn-primary{ background:#1abc9c; }
+.btn-edit{ background:#f39c12; }
+.btn-delete{ background:#e74c3c; }
+.btn-paid{ background:#27ae60; }
+.btn-mail{ background:#3498db; }
+.btn-download{ background:#27ae60; }
+.btn-danger{ background:#e74c3c; }
+
+/* Tables */
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:15px;
+}
+
+th{
+background:#f3f4f6;
+padding:12px;
+text-align:left;
+}
+
+td{
+padding:12px;
+border-bottom:1px solid #eee;
+}
+
+/* Loan Table */
+.loan-table{
+width:100%;
+border-collapse:collapse;
+}
+
+/* Helpers */
+.page-header{
+margin-bottom:20px;
+}
+
+.amount{
+font-weight:bold;
+font-size:18px;
+}
+
+.empty{
+text-align:center;
+padding:20px;
+color:#999;
+}
+
+.table-wrapper{
+overflow-x:auto;
+}
+
+.container{
+max-width:1000px;
+margin:auto;
+}

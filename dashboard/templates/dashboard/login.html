@@ -1,0 +1,59 @@
+{% extends 'dashboard/auth_base.html' %}
+
+{% block content %}
+
+<h2>Login</h2>
+
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+
+<div class="tabs">
+    <div class="tab active" onclick="showTab('password', event)">Password</div>
+    <div class="tab" onclick="showTab('otp', event)">OTP</div>
+</div>
+
+<div id="password">
+<form method="POST">
+{% csrf_token %}
+
+<input type="text" name="username" placeholder="Username or Email" required>
+<input type="password" name="password" placeholder="Password" required>
+
+<div class="remember">
+<input type="checkbox" name="remember_me">
+<label>Remember Me</label>
+</div>
+
+<button>Login</button>
+
+</form>
+</div>
+
+<div id="otp" class="hidden">
+
+<form method="POST">
+{% csrf_token %}
+
+{% if otp_sent %}
+<input type="hidden" id="otp_auto">
+
+<input type="text" name="otp" placeholder="Enter OTP" required>
+<button formaction="{% url 'verify_otp' %}">Verify & Login</button>
+
+{% else %}
+
+<input type="email" name="email" placeholder="Enter Email" required>
+<button class="btn-otp" formaction="{% url 'otp_login' %}">Send OTP</button>
+
+{% endif %}
+
+</form>
+
+</div>
+
+<div class="footer">
+<p>Don't have account? <a href="/signup/">Signup</a></p>
+</div>
+
+{% endblock %}

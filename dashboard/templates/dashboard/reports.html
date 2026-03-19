@@ -1,0 +1,75 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<h1>Reports</h1>
+
+<!-- Cards -->
+<div class="cards">
+
+<div class="card">
+<h3>Income</h3>
+<div class="amount">₹{{ total_income }}</div>
+</div>
+
+<div class="card">
+<h3>Expenses</h3>
+<div class="amount">₹{{ total_expense }}</div>
+</div>
+
+<div class="card">
+<h3>Loans</h3>
+<div class="amount">₹{{ total_loan }}</div>
+</div>
+
+<div class="card">
+<h3>Wallet</h3>
+<div class="amount">₹{{ wallet }}</div>
+</div>
+
+</div>
+
+<!-- Buttons -->
+<form method="POST">
+{% csrf_token %}
+<button name="send_email" class="btn btn-mail">Send Email 📧</button>
+<button name="download" class="btn btn-download">Download 📥</button>
+</form>
+
+<hr>
+
+<h2>Monthly Report</h2>
+
+<div class="table-wrapper">
+
+<table>
+
+<thead>
+<tr>
+<th>Month</th>
+<th>Income</th>
+<th>Expense</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for e in monthly_expenses %}
+<tr>
+<td>{{ e.month_name }}</td>
+<td>₹{{ e.income }}</td>
+<td>₹{{ e.total }}</td>
+</tr>
+{% empty %}
+<tr>
+<td colspan="3">No data available</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}
