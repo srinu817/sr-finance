@@ -2,91 +2,251 @@
 
 {% block content %}
 
+<style>
+
+/* ===== PAGE HEADER ===== */
+.page-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+/* ADD BUTTON */
+.btn-add{
+padding:10px 16px;
+background:linear-gradient(135deg,#22c55e,#16a34a);
+border-radius:10px;
+font-weight:600;
+border:none;
+color:white;
+cursor:pointer;
+}
+
+/* ===== SUMMARY CARD ===== */
+.summary-card{
+display:flex;
+align-items:center;
+gap:15px;
+background:linear-gradient(135deg,#022c22,#064e3b);
+padding:20px;
+border-radius:14px;
+border:1px solid rgba(34,197,94,0.3);
+box-shadow:0 0 20px rgba(34,197,94,0.2);
+margin-bottom:20px;
+}
+
+.summary-icon{
+width:50px;
+height:50px;
+border-radius:12px;
+background:linear-gradient(135deg,#22c55e,#16a34a);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:22px;
+}
+
+.summary-text{
+font-size:14px;
+color:#aaa;
+}
+
+.summary-amount{
+font-size:22px;
+font-weight:600;
+}
+
+/* ===== MODAL ===== */
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+display:none;
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+.modal-content{
+width:420px;
+background:#1a1a1a;
+border-radius:14px;
+padding:20px;
+box-shadow:0 10px 40px rgba(0,0,0,0.6);
+animation:fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn{
+from{opacity:0; transform:scale(0.9);}
+to{opacity:1; transform:scale(1);}
+}
+
+.modal-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:15px;
+}
+
+.modal-header h3{
+color:#4ade80;
+}
+
+.modal-close{
+cursor:pointer;
+font-size:20px;
+color:#aaa;
+}
+
+.modal-close:hover{
+color:white;
+}
+
+.modal-content input{
+background:#2a2a2a;
+border:1px solid #333;
+color:white;
+padding:12px;
+border-radius:8px;
+margin-top:6px;
+width:100%;
+}
+
+.modal-content label{
+font-size:12px;
+color:#aaa;
+}
+
+.modal-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}
+
+.modal-actions{
+display:flex;
+gap:10px;
+margin-top:15px;
+}
+
+.btn-cancel{
+background:#2a2a2a;
+color:#ccc;
+}
+
+</style>
+
+<!-- HEADER -->
 <div class="page-header">
-    <h1>Income</h1>
+    <h1>Aadaayam (Income)</h1>
+    <button class="btn-add" onclick="openModal()">+ Add Income</button>
 </div>
 
-<div class="dashboard-grid">
+<!-- SUMMARY -->
+<div class="summary-card">
+    <div class="summary-icon">📈</div>
 
-    <!-- Add Income -->
-    <div class="card">
+    <div>
+        <div class="summary-text">Monthly income</div>
+        <div class="summary-amount">₹{{ total_income }}</div>
+    </div>
+</div>
 
-        <h3>Add Income</h3>
+<!-- TABLE -->
+<div class="card">
+
+    <h3>Your Income</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for i in incomes %}
+            <tr>
+                <td>{{ i.title }}</td>
+                <td>₹{{ i.amount }}</td>
+                <td>{{ i.date }}</td>
+
+                <td>
+                    <form method="POST" action="{% url 'delete_income' i.id %}">
+                        {% csrf_token %}
+                        <button class="btn-delete">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No income added</td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="incomeModal">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+            <h3>Kotha income add cheyi</h3>
+            <span class="modal-close" onclick="closeModal()">✕</span>
+        </div>
 
         <form method="POST">
             {% csrf_token %}
 
-            <div class="form-group">
-                <input type="number" name="amount" placeholder="Amount" required>
+            <label>Title</label>
+            <input type="text" name="title" placeholder="e.g Salary" required>
+
+            <div class="modal-grid">
+                <div>
+                    <label>Amount</label>
+                    <input type="number" name="amount" required>
+                </div>
+
+                <div>
+                    <label>Date</label>
+                    <input type="date" name="date" required>
+                </div>
             </div>
 
-            <div class="form-group">
-                <input type="text" name="source" placeholder="Source" required>
-            </div>
+            <label>Category</label>
+            <input type="text" name="category">
 
-            <div class="form-group">
-                <input type="date" name="date" required>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn">Add Record</button>
             </div>
-
-            <button class="btn-primary">Add Income</button>
 
         </form>
 
     </div>
 
-    <!-- Income Table -->
-    <div class="card">
-
-        <h3>Your Income</h3>
-
-        <div class="table-wrapper">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Amount</th>
-                        <th>Source</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    {% for i in incomes %}
-
-                    <tr>
-                        <td class="amount">₹{{ i.amount }}</td>
-                        <td>{{ i.source }}</td>
-                        <td>{{ i.date }}</td>
-
-                        <td>
-                            <form method="POST" action="{% url 'delete_income' i.id %}">
-                                {% csrf_token %}
-                                <button class="btn-delete">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-
-                    {% empty %}
-
-                    <tr>
-                        <td colspan="4" class="empty">
-                            No income added yet
-                        </td>
-                    </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
 </div>
+
+<script>
+function openModal(){
+    document.getElementById("incomeModal").style.display = "flex";
+}
+
+function closeModal(){
+    document.getElementById("incomeModal").style.display = "none";
+}
+</script>
 
 {% endblock %}

@@ -6,18 +6,40 @@
     <h1>Add Loan</h1>
 </div>
 
-<div class="card">
+<div class="dashboard-grid">
 
-<form method="POST">
-{% csrf_token %}
+    <div class="card">
 
-{{ form.as_p }}
+        <h3>New Loan</h3>
 
-<button type="submit" class="btn-primary">
-Add Loan
-</button>
+        <form method="POST">
+            {% csrf_token %}
 
-</form>
+            <div class="form-group">
+                <label>Person Name</label>
+                <input type="text" name="person" placeholder="Enter name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Total Amount</label>
+                <input type="number" name="total_amount" placeholder="Enter amount" required>
+            </div>
+
+            <div class="form-group">
+                <label>Paid Amount</label>
+                <input type="number" name="paid_amount" placeholder="Enter paid amount">
+            </div>
+
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="date" required>
+            </div>
+
+            <button type="submit" class="btn">Add Loan</button>
+
+        </form>
+
+    </div>
 
 </div>
 

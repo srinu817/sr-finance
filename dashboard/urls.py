@@ -1,11 +1,10 @@
 from django.urls import path
 from . import views
 
-
 urlpatterns = [
 
     # 🔐 AUTH
-    path('', views.login_view),
+    path('', views.login_view, name="home"),  # ✅ add name
     path('login/', views.login_view, name="login"),
     path('signup/', views.signup_view, name="signup"),
     path('logout/', views.logout_view, name="logout"),
@@ -14,7 +13,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name="dashboard"),
 
     # 💸 EXPENSES
-    path('expenses/', views.expenses_view, name="expenses"),
+    path('expenses/', views.expense_view, name="expenses"),  # ✅ FIX name (expense_view)
     path('delete-expense/<int:id>/', views.delete_expense, name='delete_expense'),
 
     # 💰 INCOME
@@ -30,13 +29,15 @@ urlpatterns = [
     # 📊 REPORTS
     path('reports/', views.reports, name='reports'),
 
-    # 👤 PROFILE & SETTINGS
+    # 👤 PROFILE (merged settings inside profile)
     path('profile/', views.profile_view, name="profile"),
-    path('settings/', views.settings_view, name="settings"),
+
+    # ❌ REMOVE (not needed anymore)
+    # path('settings/', views.settings_view, name="settings"),
+
     path('delete-account/', views.delete_account, name="delete_account"),
 
     # 🔐 OTP
     path('otp-login/', views.otp_login, name='otp_login'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
 ]
-

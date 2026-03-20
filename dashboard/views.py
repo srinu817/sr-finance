@@ -270,7 +270,7 @@ def dashboard_view(request):
     if not data:
         total_income = Income.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
         total_expense = Expense.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
-        total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
+        total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
 
         wallet = total_income - total_expense - total_loan
 
@@ -288,28 +288,56 @@ def dashboard_view(request):
 
 # ========================= EXPENSE ========================= #
 
+# ========================= EXPENSE ========================= #
+
+from django.db.models import Sum
+from datetime import datetime
+
 @login_required
-def expenses_view(request):
+def expense_view(request):
     if request.method == "POST":
+        title = request.POST.get("title")
+        amount = request.POST.get("amount")
+        category = request.POST.get("category")
+        date_val = request.POST.get("date")
+
+        if not title or not amount:
+            return redirect("expenses")
+
         expense = Expense.objects.create(
             user=request.user,
-            amount=request.POST["amount"],
-            category=request.POST["category"],
-            date=request.POST["date"]
+            title=title,
+            amount=amount,
+            category=category,
+            date=date_val
         )
 
         send_user_mail(
             request.user,
             "Expense Added 💸",
-            f"You added an expense of ₹{expense.amount} in {expense.category}"
+            f"You spent ₹{expense.amount} on {expense.title}"
         )
 
         cache.delete(f"dashboard_{request.user.id}")
 
         return redirect("expenses")
 
-    expenses = Expense.objects.filter(user=request.user)
-    return render(request, "dashboard/expenses.html", {"expenses": expenses})
+    expenses = Expense.objects.filter(user=request.user).order_by('-date')
+
+    # ✅ Monthly total
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+
+    total_expense = Expense.objects.filter(
+        user=request.user,
+        date__month=current_month,
+        date__year=current_year
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    return render(request, "dashboard/expenses.html", {
+        "expenses": expenses,
+        "total_expense": total_expense
+    })
 
 
 @login_required
@@ -324,28 +352,59 @@ def delete_expense(request, id):
 
 # ========================= INCOME ========================= #
 
-@login_required
-def income_view(request):
-    if request.method == "POST":
-        income = Income.objects.create(
-            user=request.user,
-            amount=request.POST["amount"],
-            source=request.POST["source"],
-            date=request.POST["date"]
-        )
+# ========================= INCOME ========================= #
 
-        send_user_mail(
-            request.user,
-            "Income Added 💰",
-            f"You received ₹{income.amount} from {income.source}"
-        )
+# from django.db.models import Sum
+# from datetime import datetime
 
-        cache.delete(f"dashboard_{request.user.id}")
+# @login_required
+# def income_view(request):
+#     if request.method == "POST":
+#      title = request.POST.get("title")
+#     amount = request.POST.get("amount")
+#     category = request.POST.get("category")
+#     date_val = request.POST.get("date")
 
-        return redirect("income")
+#     if not title or not amount:
+#         return redirect("income")
 
-    incomes = Income.objects.filter(user=request.user)
-    return render(request, "dashboard/income.html", {"incomes": incomes})
+#     income = Income.objects.create(
+#         user=request.user,
+#         title=title,
+#         amount=amount,
+#         category=category,
+#         date=date_val
+#     )
+
+#     send_user_mail(
+#         request.user,
+#         "Income Added 💰",
+#         f"You received ₹{income.amount} from {income.title}"
+#     )
+
+#     cache.delete(f"dashboard_{request.user.id}")
+
+#     return redirect("income")
+
+        
+
+#     # ✅ Get all incomes (latest first)
+#     incomes = Income.objects.filter(user=request.user).order_by('-date')
+
+#     # ✅ Monthly total calculation
+#     current_month = datetime.now().month
+#     current_year = datetime.now().year
+
+#     total_income = Income.objects.filter(
+#         user=request.user,
+#         date__month=current_month,
+#         date__year=current_year
+#     ).aggregate(total=Sum('amount'))['total'] or 0
+
+#     return render(request, "dashboard/income.html", {
+#         "incomes": incomes,
+#         "total_income": total_income
+#     })
 
 
 @login_required
@@ -356,36 +415,88 @@ def delete_income(request, id):
     cache.delete(f"dashboard_{request.user.id}")
 
     return redirect("income")
+@login_required
+def income_view(request):
 
+    if request.method == "POST":
+        title = request.POST.get("title")
+        amount = request.POST.get("amount")
+        category = request.POST.get("category")
+        date_val = request.POST.get("date")
+
+        if not title or not amount:
+            return redirect("income")
+
+        Income.objects.create(
+            user=request.user,
+            title=title,
+            amount=amount,
+            category=category,
+            date=date_val
+        )
+
+        cache.delete(f"dashboard_{request.user.id}")
+        return redirect("income")
+
+    # ✅ GET request (NO title usage here)
+    incomes = Income.objects.filter(user=request.user).order_by('-date')
+
+    from django.db.models import Sum
+    from datetime import datetime
+
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+
+    total_income = Income.objects.filter(
+        user=request.user,
+        date__month=current_month,
+        date__year=current_year
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    return render(request, "dashboard/income.html", {
+        "incomes": incomes,
+        "total_income": total_income
+    })
 
 # ========================= LOANS ========================= #
+
+# ========================= LOANS ========================= #
+
+from django.db.models import Sum
 
 @login_required
 def loans_view(request):
     loans = Loan.objects.filter(user=request.user)
-    return render(request, "dashboard/loans.html", {"loans": loans})
+
+    total_debt = Loan.objects.filter(
+        user=request.user,
+        status="Active"
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+
+    return render(request, "dashboard/loans.html", {
+        "loans": loans,
+        "total_debt": total_debt
+    })
 
 
 @login_required
 def add_loan(request):
-    form = LoanForm(request.POST or None)
+    if request.method == "POST":
+        person = request.POST.get("person")
+        total_amount = request.POST.get("total_amount")
+        date = request.POST.get("date")
 
-    if form.is_valid():
-        loan = form.save(commit=False)
-        loan.user = request.user
-        loan.save()
-
-        send_user_mail(
-            request.user,
-            "Loan Added 🏦",
-            f"You added a loan of ₹{loan.amount}"
+        Loan.objects.create(
+            user=request.user,
+            person=person,
+            total_amount=total_amount,
+            date=date
         )
 
         cache.delete(f"dashboard_{request.user.id}")
-
         return redirect("loans")
 
-    return render(request, "dashboard/add_loan.html", {"form": form})
+    return render(request, "dashboard/add_loan.html")
 
 
 @login_required
@@ -401,31 +512,28 @@ def delete_loan(request, id):
 @login_required
 def mark_paid(request, loan_id):
     loan = get_object_or_404(Loan, id=loan_id, user=request.user)
-    loan.status = "Paid"
-    loan.save()
 
-    send_user_mail(
-        request.user,
-        "Loan Paid ✅",
-        f"Your loan of ₹{loan.amount} is marked as PAID"
-    )
+    loan.paid_amount = loan.total_amount
+    loan.status = "Closed"
+    loan.save()
 
     cache.delete(f"dashboard_{request.user.id}")
 
     return redirect("loans")
 
-
 # ========================= REPORTS ========================= #
-
 @login_required
 def reports(request):
 
     total_income = Income.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
     total_expense = Expense.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
-    total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # ✅ FIXED (loan amount field change)
+    total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
 
     wallet = total_income - total_expense - total_loan
 
+    # ✅ Monthly
     monthly_expenses = (
         Expense.objects.filter(user=request.user)
         .annotate(month=ExtractMonth('date'))
@@ -440,6 +548,24 @@ def reports(request):
             user=request.user,
             date__month=m['month']
         ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # ✅ LEDGER (NEW)
+    from itertools import chain
+
+    incomes = Income.objects.filter(user=request.user).values('date', 'title', 'amount')
+    expenses = Expense.objects.filter(user=request.user).values('date', 'title', 'amount')
+
+    for i in incomes:
+        i['type'] = 'income'
+
+    for e in expenses:
+        e['type'] = 'expense'
+
+    ledger = sorted(
+        chain(incomes, expenses),
+        key=lambda x: x['date'],
+        reverse=True
+    )
 
     if request.method == "POST":
 
@@ -458,44 +584,39 @@ Wallet: ₹{wallet}
         "total_expense": total_expense,
         "total_loan": total_loan,
         "wallet": wallet,
-        "monthly_expenses": monthly_expenses
+        "monthly_expenses": monthly_expenses,
+        "ledger": ledger
     }
 
     return render(request, "dashboard/reports.html", context)
-
-
 # ========================= PROFILE ========================= #
 
 @login_required
 def profile_view(request):
 
     if request.method == "POST":
-        request.user.username = request.POST.get("username")
-        request.user.email = request.POST.get("email")
-        request.user.save()
 
-        messages.success(request, "Profile updated successfully ✅")
-        return redirect("profile")
-
-    return render(request, "dashboard/profile.html")
-
-
-# ========================= SETTINGS ========================= #
-
-@login_required
-def settings_view(request):
-
-    if request.method == "POST":
-        password = request.POST.get("password")
-
-        if password:
-            request.user.set_password(password)
+        # Profile update
+        if "username" in request.POST:
+            request.user.username = request.POST.get("username")
+            request.user.email = request.POST.get("email")
             request.user.save()
 
-            messages.success(request, "Password updated successfully 🔐")
-            return redirect("login")
+            messages.success(request, "Profile updated successfully ✅")
+            return redirect("profile")
 
-    return render(request, "dashboard/settings.html")
+        # Password update
+        if "password" in request.POST:
+            password = request.POST.get("password")
+
+            if password:
+                request.user.set_password(password)
+                request.user.save()
+
+                messages.success(request, "Password updated 🔐")
+                return redirect("login")
+
+    return render(request, "dashboard/profile.html")
 
 
 # ========================= DELETE ACCOUNT ========================= #
