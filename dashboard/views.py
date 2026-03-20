@@ -39,24 +39,18 @@ import random,requests
 #     except Exception as e:
 #         print("❌ MAIL ERROR:", e)
 def send_user_mail(user, subject, message):
-    try:
-        if user.email:
-            print("🔥 FUNCTION START")
-            print("➡ Sending to:", user.email)
-            print("➡ FROM:", settings.DEFAULT_FROM_EMAIL)
+    # 🔥 TEMP FIX: disable email to avoid Render crash
+    print("⚠ EMAIL DISABLED (Render issue)")
+    
+    if user and user.email:
+        print("➡ TO:", user.email)
+    else:
+        print("➡ No email found")
 
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=True,   # 🔥 VERY IMPORTANT (NO CRASH)
-            )
+    print("➡ SUBJECT:", subject)
+    print("➡ MESSAGE:", message)
 
-            print("✅ MAIL SENT (or attempted)")
-
-    except Exception as e:
-        print("❌ MAIL ERROR:", e)
+    return
 
 
 # ========================= AUTH ========================= #
