@@ -214,7 +214,7 @@ def otp_login(request):
             return render(request, "dashboard/login.html", {"error": "User not found"})
 
         otp = str(random.randint(100000, 999999))
-
+        print("🔥 OTP GENERATED:", otp)  
         cache.set(f"otp_{email}", otp, timeout=300)
         cache.set(f"otp_timer_{email}", True, timeout=30)
         cache.set(f"otp_attempts_{email}", otp_attempts + 1, timeout=300)
