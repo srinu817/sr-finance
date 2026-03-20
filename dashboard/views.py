@@ -125,6 +125,7 @@ def send_user_mail(user, subject, message):
 
         print("📩 STATUS:", response.status_code)
         print("📩 RESPONSE:", response.text)
+        print("FROM:", settings.DEFAULT_FROM_EMAIL)
 
     except Exception as e:
         print("❌ Email Error:", e)
