@@ -368,3 +368,49 @@ Wallet: ₹{wallet}
     }
 
     return render(request, "dashboard/reports.html", context)
+# ========================= PROFILE ========================= #
+
+@login_required
+def profile_view(request):
+
+    if request.method == "POST":
+        request.user.username = request.POST.get("username")
+        request.user.email = request.POST.get("email")
+        request.user.save()
+
+        messages.success(request, "Profile updated successfully ✅")
+        return redirect("profile")
+
+    return render(request, "dashboard/profile.html")
+
+
+# ========================= SETTINGS ========================= #
+
+@login_required
+def settings_view(request):
+
+    if request.method == "POST":
+        password = request.POST.get("password")
+
+        if password:
+            request.user.set_password(password)
+            request.user.save()
+
+            messages.success(request, "Password updated successfully 🔐")
+            return redirect("login")
+
+    return render(request, "dashboard/settings.html")
+
+
+# ========================= DELETE ACCOUNT ========================= #
+
+@login_required
+def delete_account(request):
+
+    if request.method == "POST":
+        user = request.user
+        logout(request)
+        user.delete()
+
+        messages.success(request, "Account deleted successfully ❌")
+        return redirect("login")
