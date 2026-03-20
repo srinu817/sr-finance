@@ -320,6 +320,7 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 
 # 🔒 SECURITY
 SECURE_BROWSER_XSS_FILTER = True

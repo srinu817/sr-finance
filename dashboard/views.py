@@ -38,19 +38,60 @@ import random,requests
 
 #     except Exception as e:
 #         print("❌ MAIL ERROR:", e)
-def send_user_mail(user, subject, message):
-    # 🔥 TEMP FIX: disable email to avoid Render crash
-    print("⚠ EMAIL DISABLED (Render issue)")
+# def send_user_mail(user, subject, message):
+#     # 🔥 TEMP FIX: disable email to avoid Render crash
+#     print("⚠ EMAIL DISABLED (Render issue)")
     
-    if user and user.email:
-        print("➡ TO:", user.email)
-    else:
-        print("➡ No email found")
+#     if user and user.email:
+#         print("➡ TO:", user.email)
+#     else:
+#         print("➡ No email found")
 
-    print("➡ SUBJECT:", subject)
-    print("➡ MESSAGE:", message)
+#     print("➡ SUBJECT:", subject)
+#     print("➡ MESSAGE:", message)
 
-    return
+#     return
+import requests
+from django.conf import settings
+
+def send_user_mail(user, subject, message):
+    if not user.email:
+        print("❌ No email")
+        return
+
+    try:
+        print("🔥 Sending email via SendGrid API")
+
+        url = "https://api.sendgrid.com/v3/mail/send"
+
+        headers = {
+            "Authorization": f"Bearer {settings.SENDGRID_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "personalizations": [
+                {
+                    "to": [{"email": user.email}],
+                    "subject": subject
+                }
+            ],
+            "from": {"email": settings.DEFAULT_FROM_EMAIL},
+            "content": [
+                {
+                    "type": "text/plain",
+                    "value": message
+                }
+            ]
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+
+        print("STATUS:", response.status_code)
+        print("RESPONSE:", response.text)
+
+    except Exception as e:
+        print("❌ Email Error:", e)
 
 
 # ========================= AUTH ========================= #
