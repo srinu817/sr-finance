@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 🔐 SECURITY
 # SECRET_KEY = os.environ.get('SECRET_KEY')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-key')
-DEBUG = False
+DEBUG = True
 # ALLOWED_HOSTS = ['finex-kel1.onrender.com']
 ALLOWED_HOSTS = ['sr-finance.onrender.com', '127.0.0.1', 'localhost']
 # CSRF_TRUSTED_ORIGINS = [

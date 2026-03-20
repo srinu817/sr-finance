@@ -18,26 +18,52 @@ import random
 
 # ========================= MAIL ========================= #
 
+# def send_user_mail(user, subject, message):
+#     if not user.email:
+#         print("❌ No email found for user")
+#         return
+
+#     try:
+#         print("🔥 MAIL FUNCTION CALLED")
+
+#         send_mail(
+#             subject,
+#             message,
+#             settings.DEFAULT_FROM_EMAIL,
+#             [user.email],
+#             fail_silently=False,   # ✅ IMPORTANT FIX
+#         )
+
+#         print("✅ MAIL SENT SUCCESSFULLY")
+
+#     except Exception as e:
+#         print("❌ MAIL ERROR:", e)
 def send_user_mail(user, subject, message):
+    print("🔥 FUNCTION START")
+
     if not user.email:
-        print("❌ No email found for user")
+        print("❌ No email")
         return
 
     try:
-        print("🔥 MAIL FUNCTION CALLED")
+        print("➡ Sending to:", user.email)
+
+        from django.conf import settings
+        print("➡ FROM:", settings.DEFAULT_FROM_EMAIL)
 
         send_mail(
             subject,
             message,
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
-            fail_silently=False,   # ✅ IMPORTANT FIX
+            fail_silently=False,
         )
 
-        print("✅ MAIL SENT SUCCESSFULLY")
+        print("✅ MAIL SENT")
 
     except Exception as e:
-        print("❌ MAIL ERROR:", e)
+        print("❌ ERROR:", e)
+        
 
 
 # ========================= AUTH ========================= #
