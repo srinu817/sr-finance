@@ -110,7 +110,8 @@ def send_user_mail(user, subject, message):
         )
 
         print("✅ Mail sent successfully to", user.email)
-
+        print("USER:", EMAIL_HOST_USER)
+        print("PASS:", EMAIL_HOST_PASSWORD) 
     except Exception as e:
         print("❌ Email Error:", e)
 
