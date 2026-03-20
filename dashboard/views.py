@@ -14,26 +14,30 @@ from .forms import LoanForm
 
 import calendar
 import random
-import threading
 
 
 # ========================= MAIL ========================= #
 
 def send_user_mail(user, subject, message):
-    def send():
-        try:
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=True,
-            )
-        except Exception as e:
-            print("MAIL ERROR:", e)
+    if not user.email:
+        print("❌ No email found for user")
+        return
 
-    if user.email:
-        threading.Thread(target=send).start()
+    try:
+        print("🔥 MAIL FUNCTION CALLED")
+
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,   # ✅ IMPORTANT FIX
+        )
+
+        print("✅ MAIL SENT SUCCESSFULLY")
+
+    except Exception as e:
+        print("❌ MAIL ERROR:", e)
 
 
 # ========================= AUTH ========================= #
@@ -368,6 +372,8 @@ Wallet: ₹{wallet}
     }
 
     return render(request, "dashboard/reports.html", context)
+
+
 # ========================= PROFILE ========================= #
 
 @login_required
