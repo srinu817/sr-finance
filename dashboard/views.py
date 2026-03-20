@@ -13,7 +13,7 @@ from .models import Expense, Income, Loan
 from .forms import LoanForm
 
 import calendar
-import random
+import random,requests
 
 
 # ========================= MAIL ========================= #
@@ -39,31 +39,24 @@ import random
 #     except Exception as e:
 #         print("❌ MAIL ERROR:", e)
 def send_user_mail(user, subject, message):
-    print("🔥 FUNCTION START")
-
-    if not user.email:
-        print("❌ No email")
-        return
-
     try:
-        print("➡ Sending to:", user.email)
+        if user.email:
+            print("🔥 FUNCTION START")
+            print("➡ Sending to:", user.email)
+            print("➡ FROM:", settings.DEFAULT_FROM_EMAIL)
 
-        from django.conf import settings
-        print("➡ FROM:", settings.DEFAULT_FROM_EMAIL)
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=True,   # 🔥 VERY IMPORTANT (NO CRASH)
+            )
 
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
-
-        print("✅ MAIL SENT")
+            print("✅ MAIL SENT (or attempted)")
 
     except Exception as e:
-        print("❌ ERROR:", e)
-        
+        print("❌ MAIL ERROR:", e)
 
 
 # ========================= AUTH ========================= #
