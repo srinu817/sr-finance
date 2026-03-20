@@ -92,7 +92,7 @@ import random,requests
 
 #     except Exception as e:
 #         print("❌ Email Error:", e)
-from django.core.mail import send_mail
+import requests
 from django.conf import settings
 
 def send_user_mail(user, subject, message):
@@ -100,20 +100,25 @@ def send_user_mail(user, subject, message):
         print("❌ No email")
         return
 
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
+    url = "https://api.brevo.com/v3/smtp/email"
 
-        print("✅ Mail sent successfully to", user.email)
-        print("USER:", EMAIL_HOST_USER)
-        print("PASS:", EMAIL_HOST_PASSWORD) 
-    except Exception as e:
-        print("❌ Email Error:", e)
+    headers = {
+        "accept": "application/json",
+        "api-key": settings.BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+
+    data = {
+        "sender": {"email": settings.DEFAULT_FROM_EMAIL},
+        "to": [{"email": user.email}],
+        "subject": subject,
+        "textContent": message
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    print("STATUS:", response.status_code)
+    print("RESPONSE:", response.text)
 
 
 # ========================= AUTH ========================= #
