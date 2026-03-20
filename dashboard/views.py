@@ -122,7 +122,7 @@ def send_user_mail(user, subject, message):
 
         print("📩 STATUS:", response.status_code)
         print("📩 RESPONSE:", response.text)
-
+        print("API:", settings.BREVO_API_KEY)
     except requests.exceptions.Timeout:
         print("❌ Email timeout")
 
