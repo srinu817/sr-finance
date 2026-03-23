@@ -342,10 +342,10 @@ LOGIN_REDIRECT_URL = 'dashboard'
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 
-# sender email (same as your Brevo account email)
+# # sender email (same as your Brevo account email)
 DEFAULT_FROM_EMAIL = os.environ.get("EMAIL_HOST_USER")
-# DEFAULT_FROM_EMAIL = 'malladisrinu772@gmail.com'
-# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# DEFAULT_FROM_EMAIL = 'djangolearningsr@gmail.com'
+# DEFAULT_FROM_EMAIL =" EMAIL_HOST_USER"
 # ================== CACHE (SAFE VERSION) ================== #
 
 # ❗ TEMP disable Redis (main issue cause)

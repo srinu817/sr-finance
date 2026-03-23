@@ -92,6 +92,89 @@ import random,requests
 
 #     except Exception as e:
 #         print("❌ Email Error:", e)
+# def send_user_mail(user, subject, message):
+#     if not user.email:
+#         print("❌ No email")
+#         return
+
+#     try:
+#         url = "https://api.brevo.com/v3/smtp/email"
+
+#         headers = {
+#             "accept": "application/json",
+#             "api-key": settings.BREVO_API_KEY,
+#             "content-type": "application/json"
+#         }
+
+#         data = {
+#             "sender": {"email": settings.DEFAULT_FROM_EMAIL},
+#             "to": [{"email": user.email}],
+#             "subject": subject,
+#             "textContent": message
+#         }
+
+#         response = requests.post(
+#             url,
+#             headers=headers,
+#             json=data,
+#             timeout=10   # 🔥 add this line
+#         )
+
+#         print("📩 STATUS:", response.status_code)
+#         print("📩 RESPONSE:", response.text)
+#         print("API:", settings.BREVO_API_KEY)
+#     except requests.exceptions.Timeout:
+#         print("❌ Email timeout")
+
+#     except Exception as e:
+#         print("❌ Email Error:", e)
+# def send_user_mail(user, subject, message):
+#     if not user.email:
+#         print("❌ No email")
+#         return False   # 👈 important
+
+#     try:
+#         url = "https://api.brevo.com/v3/smtp/email"
+
+#         headers = {
+#             "accept": "application/json",
+#             "api-key": settings.BREVO_API_KEY,
+#             "content-type": "application/json"
+#         }
+
+#         data = {
+#             "sender": {"email": settings.DEFAULT_FROM_EMAIL},
+#             "to": [{"email": user.email}],
+#             "subject": subject,
+#             "textContent": message
+#         }
+
+#         response = requests.post(
+#             url,
+#             headers=headers,
+#             json=data,
+#             timeout=10
+#         )
+
+#         print("📩 STATUS:", response.status_code)
+#         print("📩 RESPONSE:", response.text)
+
+#         if response.status_code == 201:
+#             return True   # ✅ SUCCESS
+#         else:
+#             return False  # ❌ FAIL
+
+#     except requests.exceptions.Timeout:
+#         print("❌ Email timeout")
+#         return False
+
+#     except Exception as e:
+#         print("❌ Email Error:", e)
+#         return False
+import requests
+import threading
+from django.conf import settings
+
 def send_user_mail(user, subject, message):
     if not user.email:
         print("❌ No email")
@@ -107,29 +190,65 @@ def send_user_mail(user, subject, message):
         }
 
         data = {
-            "sender": {"email": settings.DEFAULT_FROM_EMAIL},
+            "sender": {
+                "name": "SR Finance",
+                "email": settings.DEFAULT_FROM_EMAIL
+            },
             "to": [{"email": user.email}],
             "subject": subject,
             "textContent": message
         }
 
-        response = requests.post(
-            url,
-            headers=headers,
-            json=data,
-            timeout=10   # 🔥 add this line
-        )
+        response = requests.post(url, headers=headers, json=data, timeout=10)
 
         print("📩 STATUS:", response.status_code)
         print("📩 RESPONSE:", response.text)
-        print("API:", settings.BREVO_API_KEY)
-    except requests.exceptions.Timeout:
-        print("❌ Email timeout")
 
     except Exception as e:
         print("❌ Email Error:", e)
 
 
+# 🔥 THREAD FUNCTION
+def send_mail_async(user, subject, message):
+    threading.Thread(
+        target=send_user_mail,
+        args=(user, subject, message),
+        daemon=True
+    ).start()
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .utils import send_mail_async
+import random
+
+def otp_login(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+
+        # generate OTP
+        otp = str(random.randint(100000, 999999))
+        request.session["otp"] = otp
+        request.session["email"] = email
+
+        # dummy user object
+        class UserObj:
+            def __init__(self, email):
+                self.email = email
+
+        user = UserObj(email)
+
+        # send email in background
+        send_mail_async(user, "Your OTP", f"Your OTP is {otp}")
+
+        messages.success(request, "📩 OTP sent successfully!")
+        return redirect("otp_verify")
+
+    return render(request, "login.html")
+
+    
 # ========================= AUTH ========================= #
 
 def login_view(request):
