@@ -16,242 +16,83 @@ import calendar
 import random,requests
 
 
-# ========================= MAIL ========================= #
-
-# def send_user_mail(user, subject, message):
-#     if not user.email:
-#         print("❌ No email found for user")
-#         return
-
-#     try:
-#         print("🔥 MAIL FUNCTION CALLED")
-
-#         send_mail(
-#             subject,
-#             message,
-#             settings.DEFAULT_FROM_EMAIL,
-#             [user.email],
-#             fail_silently=False,   # ✅ IMPORTANT FIX
-#         )
-
-#         print("✅ MAIL SENT SUCCESSFULLY")
-
-#     except Exception as e:
-#         print("❌ MAIL ERROR:", e)
-# def send_user_mail(user, subject, message):
-#     # 🔥 TEMP FIX: disable email to avoid Render crash
-#     print("⚠ EMAIL DISABLED (Render issue)")
-    
-#     if user and user.email:
-#         print("➡ TO:", user.email)
-#     else:
-#         print("➡ No email found")
-
-#     print("➡ SUBJECT:", subject)
-#     print("➡ MESSAGE:", message)
-
-#     return
-# import requests
-# from django.conf import settings
-
-# def send_user_mail(user, subject, message):
-#     if not user.email:
-#         print("❌ No email")
-#         return
-
-#     try:
-#         print("🔥 Sending email via SendGrid API")
-
-#         url = "https://api.sendgrid.com/v3/mail/send"
-
-#         headers = {
-#             "Authorization": f"Bearer {settings.SENDGRID_API_KEY}",
-#             "Content-Type": "application/json"
-#         }
-
-#         data = {
-#             "personalizations": [
-#                 {
-#                     "to": [{"email": user.email}],
-#                     "subject": subject
-#                 }
-#             ],
-#             "from": {"email": settings.DEFAULT_FROM_EMAIL},
-#             "content": [
-#                 {
-#                     "type": "text/plain",
-#                     "value": message
-#                 }
-#             ]
-#         }
-
-#         response = requests.post(url, headers=headers, json=data)
-
-#         print("STATUS:", response.status_code)
-#         print("RESPONSE:", response.text)
-
-#     except Exception as e:
-#         print("❌ Email Error:", e)
-# def send_user_mail(user, subject, message):
-#     if not user.email:
-#         print("❌ No email")
-#         return
-
-#     try:
-#         url = "https://api.brevo.com/v3/smtp/email"
-
-#         headers = {
-#             "accept": "application/json",
-#             "api-key": settings.BREVO_API_KEY,
-#             "content-type": "application/json"
-#         }
-
-#         data = {
-#             "sender": {"email": settings.DEFAULT_FROM_EMAIL},
-#             "to": [{"email": user.email}],
-#             "subject": subject,
-#             "textContent": message
-#         }
-
-#         response = requests.post(
-#             url,
-#             headers=headers,
-#             json=data,
-#             timeout=10   # 🔥 add this line
-#         )
-
-#         print("📩 STATUS:", response.status_code)
-#         print("📩 RESPONSE:", response.text)
-#         print("API:", settings.BREVO_API_KEY)
-#     except requests.exceptions.Timeout:
-#         print("❌ Email timeout")
-
-#     except Exception as e:
-#         print("❌ Email Error:", e)
-# def send_user_mail(user, subject, message):
-#     if not user.email:
-#         print("❌ No email")
-#         return False   # 👈 important
-
-#     try:
-#         url = "https://api.brevo.com/v3/smtp/email"
-
-#         headers = {
-#             "accept": "application/json",
-#             "api-key": settings.BREVO_API_KEY,
-#             "content-type": "application/json"
-#         }
-
-#         data = {
-#             "sender": {"email": settings.DEFAULT_FROM_EMAIL},
-#             "to": [{"email": user.email}],
-#             "subject": subject,
-#             "textContent": message
-#         }
-
-#         response = requests.post(
-#             url,
-#             headers=headers,
-#             json=data,
-#             timeout=10
-#         )
-
-#         print("📩 STATUS:", response.status_code)
-#         print("📩 RESPONSE:", response.text)
-
-#         if response.status_code == 201:
-#             return True   # ✅ SUCCESS
-#         else:
-#             return False  # ❌ FAIL
-
-#     except requests.exceptions.Timeout:
-#         print("❌ Email timeout")
-#         return False
-
-#     except Exception as e:
-#         print("❌ Email Error:", e)
-#         return False
 
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
+from .utils import send_user_mail, send_mail_async
+from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.cache import cache
-from django.db.models import Sum
-
-from .models import Expense, Income, Loan
 from .utils import send_mail_async
-
 import random
-
-
-# ================= OTP ================= #
+from .utils import send_mail_async
 
 def otp_login(request):
     if request.method == "POST":
         email = request.POST.get("email")
 
+        otp_attempts = cache.get(f"otp_attempts_{email}", 0)
+        if otp_attempts >= 3:
+            return render(request, "dashboard/login.html", {
+                "error": "Too many OTP requests ❌"
+            })
+
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            messages.error(request, "User not found ❌")
-            return redirect("login")
+            return render(request, "dashboard/login.html", {"error": "User not found"})
 
         otp = str(random.randint(100000, 999999))
+        print("🔥 OTP GENERATED:", otp)
 
         cache.set(f"otp_{email}", otp, timeout=300)
+
         request.session['otp_email'] = email
 
-        html = f"""
-        <h2>SR Finance 🔐</h2>
-        <p>Your OTP is:</p>
-        <h1>{otp}</h1>
-        <p>Valid for 5 minutes</p>
-        """
+        # ✅ FIXED LINE
+        send_mail_async(user, "Your OTP", f"OTP: {otp}")
 
-        send_mail_async(user, "Your OTP Code", html)
-
-        messages.success(request, "OTP sent successfully ✅")
         return render(request, "dashboard/login.html", {"otp_sent": True})
-
-    return render(request, "dashboard/login.html")
-
-
-def verify_otp(request):
-    if request.method == "POST":
-        otp_input = request.POST.get("otp")
-        email = request.session.get("otp_email")
-
-        if not email:
-            return redirect("login")
-
-        stored_otp = cache.get(f"otp_{email}")
-
-        if stored_otp == otp_input:
-            user = User.objects.get(email=email)
-            login(request, user)
-
-            cache.delete(f"otp_{email}")
-            request.session.pop('otp_email', None)
-
-            return redirect("dashboard")
-
-        messages.error(request, "Invalid OTP ❌")
-        return redirect("login")
 
     return redirect("login")
 
-
-# ================= AUTH ================= #
+    
+# ========================= AUTH ========================= #
 
 def login_view(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        attempts = cache.get(f"login_attempts_{username}", 0)
+        if attempts >= 5:
+            return render(request, "dashboard/login.html", {
+                "error": "Too many attempts. Try after 5 minutes ❌"
+            })
+
+        try:
+            user_obj = User.objects.get(email=username)
+            username = user_obj.username
+        except User.DoesNotExist:
+            pass
+
+        user = authenticate(request, username=username, password=password)
+
+        if user:
+            login(request, user)
+            cache.delete(f"login_attempts_{username}")
+            return redirect("dashboard")
+        else:
+            cache.set(f"login_attempts_{username}", attempts + 1, timeout=300)
+
+            return render(request, "dashboard/login.html", {
+                "error": "Invalid credentials ❌"
+            })
+
     return render(request, "dashboard/login.html")
 
 
 def signup_view(request):
     if request.method == "POST":
+
         username = request.POST.get("username")
         email = request.POST.get("email")
         password = request.POST.get("password")
@@ -261,14 +102,14 @@ def signup_view(request):
             return redirect("signup")
 
         if User.objects.filter(email=email).exists():
-            messages.error(request, "Email already exists ❌")
+            messages.error(request, "Email already registered ❌")
             return redirect("signup")
 
         user = User.objects.create_user(username=username, email=email, password=password)
+
         login(request, user)
 
-        html = "<h3>Welcome to SR Finance 🎉</h3><p>Your account created successfully</p>"
-        send_mail_async(user, "Welcome", html)
+        send_user_mail(user, "Welcome 🎉", "Account created successfully!")
 
         return redirect("dashboard")
 
@@ -280,86 +121,289 @@ def logout_view(request):
     return redirect("login")
 
 
-# ================= DASHBOARD ================= #
+# ========================= OTP ========================= #
+
+def otp_login(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+
+        otp_attempts = cache.get(f"otp_attempts_{email}", 0)
+        if otp_attempts >= 3:
+            return render(request, "dashboard/login.html", {
+                "error": "Too many OTP requests. Try later ❌"
+            })
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return render(request, "dashboard/login.html", {"error": "User not found"})
+
+        otp = str(random.randint(100000, 999999))
+        print("🔥 OTP GENERATED:", otp)  
+        print("Sending OTP to:", email)
+        cache.set(f"otp_{email}", otp, timeout=300)
+        cache.set(f"otp_timer_{email}", True, timeout=30)
+        cache.set(f"otp_attempts_{email}", otp_attempts + 1, timeout=300)
+
+        request.session['otp_email'] = email
+
+        send_user_mail(user, "Your OTP", f"OTP: {otp}")
+
+        return render(request, "dashboard/login.html", {"otp_sent": True})
+
+    return redirect("login")
+
+
+def verify_otp(request):
+    if request.method == "POST":
+
+        otp_input = request.POST.get("otp")
+        email = request.session.get("otp_email")
+
+        if not email:
+            return redirect("login")
+
+        stored_otp = cache.get(f"otp_{email}")
+
+        if stored_otp and stored_otp == otp_input:
+            user = User.objects.get(email=email)
+
+            login(request, user)
+
+            cache.delete(f"otp_{email}")
+            cache.delete(f"otp_attempts_{email}")
+            
+            request.session.pop('otp_email', None)
+            # del request.session['otp_email']
+
+            return redirect("dashboard")
+
+        return render(request, "dashboard/login.html", {
+            "error": "Invalid OTP ❌",
+            "otp_sent": True
+        })
+
+    return redirect("login")
+
+
+# ========================= DASHBOARD ========================= #
 
 @login_required
 def dashboard_view(request):
-    total_income = Income.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
-    total_expense = Expense.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
-    total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
 
-    wallet = total_income - total_expense - total_loan
+    cache_key = f"dashboard_{request.user.id}"
+    data = cache.get(cache_key)
 
-    return render(request, "dashboard/dashboard.html", {
-        "total_income": total_income,
-        "total_expense": total_expense,
-        "total_loan": total_loan,
-        "wallet": wallet
-    })
+    if not data:
+        total_income = Income.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
+        total_expense = Expense.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
+        total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+
+        wallet = total_income - total_expense - total_loan
+
+        data = {
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "total_loan": total_loan,
+            "wallet": wallet
+        }
+
+        cache.set(cache_key, data, timeout=60)
+
+    return render(request, "dashboard/dashboard.html", data)
 
 
-# ================= EXPENSE ================= #
+# ========================= EXPENSE ========================= #
+
+# ========================= EXPENSE ========================= #
+
+from django.db.models import Sum
+from datetime import datetime
 
 @login_required
 def expense_view(request):
     if request.method == "POST":
         title = request.POST.get("title")
         amount = request.POST.get("amount")
+        category = request.POST.get("category")
+        date_val = request.POST.get("date")
 
         if not title or not amount:
-            messages.error(request, "Fill all fields ❌")
             return redirect("expenses")
 
         expense = Expense.objects.create(
             user=request.user,
             title=title,
-            amount=amount
+            amount=amount,
+            category=category,
+            date=date_val
         )
 
-        html = f"<h3>Expense Added 💸</h3><p>₹{expense.amount} spent on {expense.title}</p>"
-        send_mail_async(request.user, "Expense Added", html)
+        send_user_mail(
+            request.user,
+            "Expense Added 💸",
+            f"You spent ₹{expense.amount} on {expense.title}"
+        )
 
-        messages.success(request, "Expense added successfully ✅")
+        cache.delete(f"dashboard_{request.user.id}")
+
         return redirect("expenses")
 
-    expenses = Expense.objects.filter(user=request.user)
-    return render(request, "dashboard/expenses.html", {"expenses": expenses})
+    expenses = Expense.objects.filter(user=request.user).order_by('-date')
 
+    # ✅ Monthly total
+    current_month = datetime.now().month
+    current_year = datetime.now().year
 
-# ================= INCOME ================= #
+    total_expense = Expense.objects.filter(
+        user=request.user,
+        date__month=current_month,
+        date__year=current_year
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    return render(request, "dashboard/expenses.html", {
+        "expenses": expenses,
+        "total_expense": total_expense
+    })
+
 
 @login_required
+def delete_expense(request, id):
+    exp = get_object_or_404(Expense, id=id, user=request.user)
+    exp.delete()
+
+    cache.delete(f"dashboard_{request.user.id}")
+
+    return redirect("expenses")
+
+
+# ========================= INCOME ========================= #
+
+# ========================= INCOME ========================= #
+
+# from django.db.models import Sum
+# from datetime import datetime
+
+# @login_required
+# def income_view(request):
+#     if request.method == "POST":
+#      title = request.POST.get("title")
+#     amount = request.POST.get("amount")
+#     category = request.POST.get("category")
+#     date_val = request.POST.get("date")
+
+#     if not title or not amount:
+#         return redirect("income")
+
+#     income = Income.objects.create(
+#         user=request.user,
+#         title=title,
+#         amount=amount,
+#         category=category,
+#         date=date_val
+#     )
+
+#     send_user_mail(
+#         request.user,
+#         "Income Added 💰",
+#         f"You received ₹{income.amount} from {income.title}"
+#     )
+
+#     cache.delete(f"dashboard_{request.user.id}")
+
+#     return redirect("income")
+
+        
+
+#     # ✅ Get all incomes (latest first)
+#     incomes = Income.objects.filter(user=request.user).order_by('-date')
+
+#     # ✅ Monthly total calculation
+#     current_month = datetime.now().month
+#     current_year = datetime.now().year
+
+#     total_income = Income.objects.filter(
+#         user=request.user,
+#         date__month=current_month,
+#         date__year=current_year
+#     ).aggregate(total=Sum('amount'))['total'] or 0
+
+#     return render(request, "dashboard/income.html", {
+#         "incomes": incomes,
+#         "total_income": total_income
+#     })
+
+
+@login_required
+def delete_income(request, id):
+    inc = get_object_or_404(Income, id=id, user=request.user)
+    inc.delete()
+
+    cache.delete(f"dashboard_{request.user.id}")
+
+    return redirect("income")
+@login_required
 def income_view(request):
+
     if request.method == "POST":
         title = request.POST.get("title")
         amount = request.POST.get("amount")
+        category = request.POST.get("category")
+        date_val = request.POST.get("date")
 
         if not title or not amount:
-            messages.error(request, "Fill all fields ❌")
             return redirect("income")
 
-        income = Income.objects.create(
+        Income.objects.create(
             user=request.user,
             title=title,
-            amount=amount
+            amount=amount,
+            category=category,
+            date=date_val
         )
 
-        html = f"<h3>Income Added 💰</h3><p>₹{income.amount} received from {income.title}</p>"
-        send_mail_async(request.user, "Income Added", html)
-
-        messages.success(request, "Income added successfully 💰")
+        cache.delete(f"dashboard_{request.user.id}")
         return redirect("income")
 
-    incomes = Income.objects.filter(user=request.user)
-    return render(request, "dashboard/income.html", {"incomes": incomes})
+    # ✅ GET request (NO title usage here)
+    incomes = Income.objects.filter(user=request.user).order_by('-date')
 
+    from django.db.models import Sum
+    from datetime import datetime
 
-# ================= LOAN ================= #
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+
+    total_income = Income.objects.filter(
+        user=request.user,
+        date__month=current_month,
+        date__year=current_year
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    return render(request, "dashboard/income.html", {
+        "incomes": incomes,
+        "total_income": total_income
+    })
+
+# ========================= LOANS ========================= #
+
+# ========================= LOANS ========================= #
+
+from django.db.models import Sum
 
 @login_required
 def loans_view(request):
     loans = Loan.objects.filter(user=request.user)
-    return render(request, "dashboard/loans.html", {"loans": loans})
+
+    total_debt = Loan.objects.filter(
+        user=request.user,
+        status="Active"
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+
+    return render(request, "dashboard/loans.html", {
+        "loans": loans,
+        "total_debt": total_debt
+    })
 
 
 @login_required
@@ -367,21 +411,16 @@ def add_loan(request):
     if request.method == "POST":
         person = request.POST.get("person")
         total_amount = request.POST.get("total_amount")
+        date = request.POST.get("date")
 
-        if not person or not total_amount:
-            messages.error(request, "Fill all fields ❌")
-            return redirect("loans")
-
-        loan = Loan.objects.create(
+        Loan.objects.create(
             user=request.user,
             person=person,
-            total_amount=total_amount
+            total_amount=total_amount,
+            date=date
         )
 
-        html = f"<h3>Loan Added 📄</h3><p>₹{loan.total_amount} given to {loan.person}</p>"
-        send_mail_async(request.user, "Loan Added", html)
-
-        messages.success(request, "Loan added successfully 📄")
+        cache.delete(f"dashboard_{request.user.id}")
         return redirect("loans")
 
     return render(request, "dashboard/add_loan.html")
@@ -391,7 +430,11 @@ def add_loan(request):
 def delete_loan(request, id):
     loan = get_object_or_404(Loan, id=id, user=request.user)
     loan.delete()
+
+    cache.delete(f"dashboard_{request.user.id}")
+
     return redirect("loans")
+
 
 @login_required
 def mark_paid(request, loan_id):
