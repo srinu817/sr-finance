@@ -173,81 +173,85 @@ import random,requests
 #         return False
 
 
-from .utils import send_user_mail, send_mail_async
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.cache import cache
+from django.db.models import Sum
+
+from .models import Expense, Income, Loan
 from .utils import send_mail_async
+
 import random
-from .utils import send_mail_async
+
+
+# ================= OTP ================= #
 
 def otp_login(request):
     if request.method == "POST":
         email = request.POST.get("email")
 
-        otp_attempts = cache.get(f"otp_attempts_{email}", 0)
-        if otp_attempts >= 3:
-            return render(request, "dashboard/login.html", {
-                "error": "Too many OTP requests ❌"
-            })
-
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return render(request, "dashboard/login.html", {"error": "User not found"})
+            messages.error(request, "User not found ❌")
+            return redirect("login")
 
         otp = str(random.randint(100000, 999999))
-        print("🔥 OTP GENERATED:", otp)
 
         cache.set(f"otp_{email}", otp, timeout=300)
-
         request.session['otp_email'] = email
 
-        # ✅ FIXED LINE
-        send_mail_async(user, "Your OTP", f"OTP: {otp}")
+        html = f"""
+        <h2>SR Finance 🔐</h2>
+        <p>Your OTP is:</p>
+        <h1>{otp}</h1>
+        <p>Valid for 5 minutes</p>
+        """
 
+        send_mail_async(user, "Your OTP Code", html)
+
+        messages.success(request, "OTP sent successfully ✅")
         return render(request, "dashboard/login.html", {"otp_sent": True})
+
+    return render(request, "dashboard/login.html")
+
+
+def verify_otp(request):
+    if request.method == "POST":
+        otp_input = request.POST.get("otp")
+        email = request.session.get("otp_email")
+
+        if not email:
+            return redirect("login")
+
+        stored_otp = cache.get(f"otp_{email}")
+
+        if stored_otp == otp_input:
+            user = User.objects.get(email=email)
+            login(request, user)
+
+            cache.delete(f"otp_{email}")
+            request.session.pop('otp_email', None)
+
+            return redirect("dashboard")
+
+        messages.error(request, "Invalid OTP ❌")
+        return redirect("login")
 
     return redirect("login")
 
-    
-# ========================= AUTH ========================= #
+
+# ================= AUTH ================= #
 
 def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        attempts = cache.get(f"login_attempts_{username}", 0)
-        if attempts >= 5:
-            return render(request, "dashboard/login.html", {
-                "error": "Too many attempts. Try after 5 minutes ❌"
-            })
-
-        try:
-            user_obj = User.objects.get(email=username)
-            username = user_obj.username
-        except User.DoesNotExist:
-            pass
-
-        user = authenticate(request, username=username, password=password)
-
-        if user:
-            login(request, user)
-            cache.delete(f"login_attempts_{username}")
-            return redirect("dashboard")
-        else:
-            cache.set(f"login_attempts_{username}", attempts + 1, timeout=300)
-
-            return render(request, "dashboard/login.html", {
-                "error": "Invalid credentials ❌"
-            })
-
     return render(request, "dashboard/login.html")
 
 
 def signup_view(request):
     if request.method == "POST":
-
         username = request.POST.get("username")
         email = request.POST.get("email")
         password = request.POST.get("password")
@@ -257,14 +261,14 @@ def signup_view(request):
             return redirect("signup")
 
         if User.objects.filter(email=email).exists():
-            messages.error(request, "Email already registered ❌")
+            messages.error(request, "Email already exists ❌")
             return redirect("signup")
 
         user = User.objects.create_user(username=username, email=email, password=password)
-
         login(request, user)
 
-        send_user_mail(user, "Welcome 🎉", "Account created successfully!")
+        html = "<h3>Welcome to SR Finance 🎉</h3><p>Your account created successfully</p>"
+        send_mail_async(user, "Welcome", html)
 
         return redirect("dashboard")
 
@@ -276,288 +280,86 @@ def logout_view(request):
     return redirect("login")
 
 
-# ========================= OTP ========================= #
-
-def otp_login(request):
-    if request.method == "POST":
-        email = request.POST.get("email")
-
-        otp_attempts = cache.get(f"otp_attempts_{email}", 0)
-        if otp_attempts >= 3:
-            return render(request, "dashboard/login.html", {
-                "error": "Too many OTP requests. Try later ❌"
-            })
-
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return render(request, "dashboard/login.html", {"error": "User not found"})
-
-        otp = str(random.randint(100000, 999999))
-        print("🔥 OTP GENERATED:", otp)  
-        print("Sending OTP to:", email)
-        cache.set(f"otp_{email}", otp, timeout=300)
-        cache.set(f"otp_timer_{email}", True, timeout=30)
-        cache.set(f"otp_attempts_{email}", otp_attempts + 1, timeout=300)
-
-        request.session['otp_email'] = email
-
-        send_user_mail(user, "Your OTP", f"OTP: {otp}")
-
-        return render(request, "dashboard/login.html", {"otp_sent": True})
-
-    return redirect("login")
-
-
-def verify_otp(request):
-    if request.method == "POST":
-
-        otp_input = request.POST.get("otp")
-        email = request.session.get("otp_email")
-
-        if not email:
-            return redirect("login")
-
-        stored_otp = cache.get(f"otp_{email}")
-
-        if stored_otp and stored_otp == otp_input:
-            user = User.objects.get(email=email)
-
-            login(request, user)
-
-            cache.delete(f"otp_{email}")
-            cache.delete(f"otp_attempts_{email}")
-
-            del request.session['otp_email']
-
-            return redirect("dashboard")
-
-        return render(request, "dashboard/login.html", {
-            "error": "Invalid OTP ❌",
-            "otp_sent": True
-        })
-
-    return redirect("login")
-
-
-# ========================= DASHBOARD ========================= #
+# ================= DASHBOARD ================= #
 
 @login_required
 def dashboard_view(request):
+    total_income = Income.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
+    total_expense = Expense.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
+    total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
 
-    cache_key = f"dashboard_{request.user.id}"
-    data = cache.get(cache_key)
+    wallet = total_income - total_expense - total_loan
 
-    if not data:
-        total_income = Income.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
-        total_expense = Expense.objects.filter(user=request.user).aggregate(Sum('amount'))['amount__sum'] or 0
-        total_loan = Loan.objects.filter(user=request.user).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-
-        wallet = total_income - total_expense - total_loan
-
-        data = {
-            "total_income": total_income,
-            "total_expense": total_expense,
-            "total_loan": total_loan,
-            "wallet": wallet
-        }
-
-        cache.set(cache_key, data, timeout=60)
-
-    return render(request, "dashboard/dashboard.html", data)
+    return render(request, "dashboard/dashboard.html", {
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "total_loan": total_loan,
+        "wallet": wallet
+    })
 
 
-# ========================= EXPENSE ========================= #
-
-# ========================= EXPENSE ========================= #
-
-from django.db.models import Sum
-from datetime import datetime
+# ================= EXPENSE ================= #
 
 @login_required
 def expense_view(request):
     if request.method == "POST":
         title = request.POST.get("title")
         amount = request.POST.get("amount")
-        category = request.POST.get("category")
-        date_val = request.POST.get("date")
 
         if not title or not amount:
+            messages.error(request, "Fill all fields ❌")
             return redirect("expenses")
 
         expense = Expense.objects.create(
             user=request.user,
             title=title,
-            amount=amount,
-            category=category,
-            date=date_val
+            amount=amount
         )
 
-        send_user_mail(
-            request.user,
-            "Expense Added 💸",
-            f"You spent ₹{expense.amount} on {expense.title}"
-        )
+        html = f"<h3>Expense Added 💸</h3><p>₹{expense.amount} spent on {expense.title}</p>"
+        send_mail_async(request.user, "Expense Added", html)
 
-        cache.delete(f"dashboard_{request.user.id}")
-
+        messages.success(request, "Expense added successfully ✅")
         return redirect("expenses")
 
-    expenses = Expense.objects.filter(user=request.user).order_by('-date')
-
-    # ✅ Monthly total
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-
-    total_expense = Expense.objects.filter(
-        user=request.user,
-        date__month=current_month,
-        date__year=current_year
-    ).aggregate(total=Sum('amount'))['total'] or 0
-
-    return render(request, "dashboard/expenses.html", {
-        "expenses": expenses,
-        "total_expense": total_expense
-    })
+    expenses = Expense.objects.filter(user=request.user)
+    return render(request, "dashboard/expenses.html", {"expenses": expenses})
 
 
-@login_required
-def delete_expense(request, id):
-    exp = get_object_or_404(Expense, id=id, user=request.user)
-    exp.delete()
+# ================= INCOME ================= #
 
-    cache.delete(f"dashboard_{request.user.id}")
-
-    return redirect("expenses")
-
-
-# ========================= INCOME ========================= #
-
-# ========================= INCOME ========================= #
-
-# from django.db.models import Sum
-# from datetime import datetime
-
-# @login_required
-# def income_view(request):
-#     if request.method == "POST":
-#      title = request.POST.get("title")
-#     amount = request.POST.get("amount")
-#     category = request.POST.get("category")
-#     date_val = request.POST.get("date")
-
-#     if not title or not amount:
-#         return redirect("income")
-
-#     income = Income.objects.create(
-#         user=request.user,
-#         title=title,
-#         amount=amount,
-#         category=category,
-#         date=date_val
-#     )
-
-#     send_user_mail(
-#         request.user,
-#         "Income Added 💰",
-#         f"You received ₹{income.amount} from {income.title}"
-#     )
-
-#     cache.delete(f"dashboard_{request.user.id}")
-
-#     return redirect("income")
-
-        
-
-#     # ✅ Get all incomes (latest first)
-#     incomes = Income.objects.filter(user=request.user).order_by('-date')
-
-#     # ✅ Monthly total calculation
-#     current_month = datetime.now().month
-#     current_year = datetime.now().year
-
-#     total_income = Income.objects.filter(
-#         user=request.user,
-#         date__month=current_month,
-#         date__year=current_year
-#     ).aggregate(total=Sum('amount'))['total'] or 0
-
-#     return render(request, "dashboard/income.html", {
-#         "incomes": incomes,
-#         "total_income": total_income
-#     })
-
-
-@login_required
-def delete_income(request, id):
-    inc = get_object_or_404(Income, id=id, user=request.user)
-    inc.delete()
-
-    cache.delete(f"dashboard_{request.user.id}")
-
-    return redirect("income")
 @login_required
 def income_view(request):
-
     if request.method == "POST":
         title = request.POST.get("title")
         amount = request.POST.get("amount")
-        category = request.POST.get("category")
-        date_val = request.POST.get("date")
 
         if not title or not amount:
+            messages.error(request, "Fill all fields ❌")
             return redirect("income")
 
-        Income.objects.create(
+        income = Income.objects.create(
             user=request.user,
             title=title,
-            amount=amount,
-            category=category,
-            date=date_val
+            amount=amount
         )
 
-        cache.delete(f"dashboard_{request.user.id}")
+        html = f"<h3>Income Added 💰</h3><p>₹{income.amount} received from {income.title}</p>"
+        send_mail_async(request.user, "Income Added", html)
+
+        messages.success(request, "Income added successfully 💰")
         return redirect("income")
 
-    # ✅ GET request (NO title usage here)
-    incomes = Income.objects.filter(user=request.user).order_by('-date')
+    incomes = Income.objects.filter(user=request.user)
+    return render(request, "dashboard/income.html", {"incomes": incomes})
 
-    from django.db.models import Sum
-    from datetime import datetime
 
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-
-    total_income = Income.objects.filter(
-        user=request.user,
-        date__month=current_month,
-        date__year=current_year
-    ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-    return render(request, "dashboard/income.html", {
-        "incomes": incomes,
-        "total_income": total_income
-    })
-
-# ========================= LOANS ========================= #
-
-# ========================= LOANS ========================= #
-
-from django.db.models import Sum
+# ================= LOAN ================= #
 
 @login_required
 def loans_view(request):
     loans = Loan.objects.filter(user=request.user)
-
-    total_debt = Loan.objects.filter(
-        user=request.user,
-        status="Active"
-    ).aggregate(total=Sum('total_amount'))['total'] or 0
-
-    return render(request, "dashboard/loans.html", {
-        "loans": loans,
-        "total_debt": total_debt
-    })
+    return render(request, "dashboard/loans.html", {"loans": loans})
 
 
 @login_required
@@ -565,16 +367,21 @@ def add_loan(request):
     if request.method == "POST":
         person = request.POST.get("person")
         total_amount = request.POST.get("total_amount")
-        date = request.POST.get("date")
 
-        Loan.objects.create(
+        if not person or not total_amount:
+            messages.error(request, "Fill all fields ❌")
+            return redirect("loans")
+
+        loan = Loan.objects.create(
             user=request.user,
             person=person,
-            total_amount=total_amount,
-            date=date
+            total_amount=total_amount
         )
 
-        cache.delete(f"dashboard_{request.user.id}")
+        html = f"<h3>Loan Added 📄</h3><p>₹{loan.total_amount} given to {loan.person}</p>"
+        send_mail_async(request.user, "Loan Added", html)
+
+        messages.success(request, "Loan added successfully 📄")
         return redirect("loans")
 
     return render(request, "dashboard/add_loan.html")
@@ -584,11 +391,7 @@ def add_loan(request):
 def delete_loan(request, id):
     loan = get_object_or_404(Loan, id=id, user=request.user)
     loan.delete()
-
-    cache.delete(f"dashboard_{request.user.id}")
-
     return redirect("loans")
-
 
 @login_required
 def mark_paid(request, loan_id):

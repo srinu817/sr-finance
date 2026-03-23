@@ -2,7 +2,8 @@ import requests
 import threading
 from django.conf import settings
 
-def send_user_mail(user, subject, message):
+
+def send_user_mail(user, subject, html_content):
     if not user.email:
         print("❌ No email")
         return
@@ -23,7 +24,7 @@ def send_user_mail(user, subject, message):
             },
             "to": [{"email": user.email}],
             "subject": subject,
-            "textContent": message
+            "htmlContent": html_content
         }
 
         response = requests.post(url, headers=headers, json=data, timeout=10)
@@ -35,10 +36,9 @@ def send_user_mail(user, subject, message):
         print("❌ Email Error:", e)
 
 
-# 🔥 THREAD FUNCTION
-def send_mail_async(user, subject, message):
+def send_mail_async(user, subject, html_content):
     threading.Thread(
         target=send_user_mail,
-        args=(user, subject, message),
+        args=(user, subject, html_content),
         daemon=True
     ).start()
