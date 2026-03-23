@@ -173,35 +173,41 @@ import random,requests
 #         return False
 
 
-
+from .utils import send_user_mail, send_mail_async
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .utils import send_mail_async
 import random
+from .utils import send_mail_async
 
 def otp_login(request):
     if request.method == "POST":
         email = request.POST.get("email")
 
-        # generate OTP
+        otp_attempts = cache.get(f"otp_attempts_{email}", 0)
+        if otp_attempts >= 3:
+            return render(request, "dashboard/login.html", {
+                "error": "Too many OTP requests ❌"
+            })
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return render(request, "dashboard/login.html", {"error": "User not found"})
+
         otp = str(random.randint(100000, 999999))
-        request.session["otp"] = otp
-        request.session["email"] = email
+        print("🔥 OTP GENERATED:", otp)
 
-        # dummy user object
-        class UserObj:
-            def __init__(self, email):
-                self.email = email
+        cache.set(f"otp_{email}", otp, timeout=300)
 
-        user = UserObj(email)
+        request.session['otp_email'] = email
 
-        # send email in background
-        send_mail_async(user, "Your OTP", f"Your OTP is {otp}")
+        # ✅ FIXED LINE
+        send_mail_async(user, "Your OTP", f"OTP: {otp}")
 
-        messages.success(request, "📩 OTP sent successfully!")
-        return redirect("otp_verify")
+        return render(request, "dashboard/login.html", {"otp_sent": True})
 
-    return render(request, "login.html")
+    return redirect("login")
 
     
 # ========================= AUTH ========================= #
